@@ -2,7 +2,7 @@ import os
 import time
 import json
 import requests
-from flask import Flask, render_template
+from flask import Flask, render_template, redirect
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -17,6 +17,8 @@ SECRET = os.getenv("SECRET")
 API_URL = "https://api.intra.42.fr/v2"
 
 HEILBRONN_EMAIL_DOMAIN = "@student.42heilbronn.de"
+
+CANDIDATES_FILE = "heilbronn_candidates.json"
 CACHE_FILE = "students_cache.json"
 
 # ================= API CLASS =================
@@ -33,6 +35,8 @@ class IntraAPI:
         }
         res = requests.post(f"{API_URL}/oauth/token", data=data)
         return res.json().get("access_token")
+
+    # ---------- DISCOVERY ----------
 
     def get_recent_students(self, pages=5, per_page=100):
         headers = {"Authorization": f"Bearer {self.token}"}
@@ -61,10 +65,15 @@ class IntraAPI:
         return students
 
     def filter_heilbronn_candidates(self, users):
-        return [u for u in users if u.get("email", "").endswith(HEILBRONN_EMAIL_DOMAIN)]
+        return [
+            u["login"]
+            for u in users
+            if u.get("email", "").endswith(HEILBRONN_EMAIL_DOMAIN)
+        ]
+
+    # ---------- TRACKING ----------
 
     def get_user_details(self, login):
-        """Детальная информация + проверка Piscine"""
         headers = {"Authorization": f"Bearer {self.token}"}
         res = requests.get(f"{API_URL}/users/{login}", headers=headers)
 
@@ -73,17 +82,18 @@ class IntraAPI:
 
         data = res.json()
 
-        # Проверка Piscine через cursus slug или name
         level = 0
         is_piscine = False
+
         for cu in data.get("cursus_users", []):
             cursus = cu.get("cursus", {})
-            slug = cursus.get("slug", "").lower()
             name = cursus.get("name", "").lower()
-            if "piscine" in slug or "piscine" in name:
+            slug = cursus.get("slug", "").lower()
+
+            if "piscine" in name or "piscine" in slug:
                 is_piscine = True
                 level = cu.get("level", 0)
-                break  # берём первый найденный Piscine
+                break
 
         if not is_piscine:
             return None
@@ -104,55 +114,76 @@ class IntraAPI:
             "exams": exams
         }
 
+# ================= HELPERS =================
+
+def load_candidates():
+    if not os.path.exists(CANDIDATES_FILE):
+        return []
+    with open(CANDIDATES_FILE) as f:
+        return json.load(f)
+
+def save_candidates(logins):
+    with open(CANDIDATES_FILE, "w") as f:
+        json.dump(sorted(set(logins)), f, indent=2)
+
 # ================= CACHE =================
 
 cached_data = []
 
 # ================= ROUTES =================
 
-@app.route('/')
+@app.route("/")
 def index():
     global cached_data
 
     if not cached_data and os.path.exists(CACHE_FILE):
         try:
-            with open(CACHE_FILE, "r") as f:
+            with open(CACHE_FILE) as f:
                 cached_data = json.load(f)
         except json.JSONDecodeError:
             cached_data = []
 
     return render_template("index.html", students=cached_data)
 
-@app.route('/refresh')
+# ---------- RESCAN (редко) ----------
+
+@app.route("/rescan")
+def rescan_students():
+    api = IntraAPI()
+
+    print("Rescanning recent students...")
+    recent = api.get_recent_students(pages=10, per_page=100)
+
+    logins = api.filter_heilbronn_candidates(recent)
+    save_candidates(logins)
+
+    return f"Found {len(logins)} Heilbronn candidates. Saved."
+
+# ---------- REFRESH (часто) ----------
+
+@app.route("/refresh")
 def refresh_data():
     global cached_data
     api = IntraAPI()
 
-    print("Fetching recent students...")
-    recent_users = api.get_recent_students(pages=5, per_page=100)
-    print(f"Recent users fetched: {len(recent_users)}")
-
-    heilbronn_candidates = api.filter_heilbronn_candidates(recent_users)
-    print(f"Heilbronn email candidates: {len(heilbronn_candidates)}")
+    logins = load_candidates()
+    print(f"Refreshing {len(logins)} students")
 
     full_data = []
 
-    for u in heilbronn_candidates:
-        login = u.get("login")
-        print(f"Checking Piscine: {login}")
-
+    for login in logins:
+        print(f"Updating: {login}")
         details = api.get_user_details(login)
         if details:
             full_data.append(details)
-
-        time.sleep(0.4)
+        time.sleep(0.3)
 
     cached_data = sorted(full_data, key=lambda x: x["level"], reverse=True)
 
     with open(CACHE_FILE, "w") as f:
         json.dump(cached_data, f, indent=2)
 
-    return f"Loaded {len(cached_data)} Heilbronn Piscine students!"
+    return redirect("/")
 
 # ================= RUN =================
 
