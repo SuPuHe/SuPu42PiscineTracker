@@ -1,0 +1,14 @@
+version: "3.9"
+
+services:
+  tracker:
+    build: .
+    container_name: 42_tracker
+    ports:
+      - "5000:5000"
+    env_file:
+      - .env
+    volumes:
+      - ./students_cache.json:/app/students_cache.json
+      - ./heilbronn_candidates.json:/app/heilbronn_candidates.json
+    restart: unless-stopped
