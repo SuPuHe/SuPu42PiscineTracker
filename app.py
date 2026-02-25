@@ -2,7 +2,9 @@ import os
 import time
 import json
 import requests
+from datetime import datetime
 from flask import Flask, render_template, redirect
+from flask_apscheduler import APScheduler
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -20,6 +22,12 @@ HEILBRONN_EMAIL_DOMAIN = "@student.42heilbronn.de"
 
 CANDIDATES_FILE = "heilbronn_candidates.json"
 CACHE_FILE = "students_cache.json"
+
+class Config:
+    SCHEDULER_API_ENABLED = True
+
+app.config.from_object(Config())
+scheduler = APScheduler()
 
 # ================= API CLASS =================
 
@@ -116,6 +124,8 @@ class IntraAPI:
 
 # ================= HELPERS =================
 
+last_update = "Never"
+
 def load_candidates():
     if not os.path.exists(CANDIDATES_FILE):
         return []
@@ -126,24 +136,52 @@ def save_candidates(logins):
     with open(CANDIDATES_FILE, "w") as f:
         json.dump(sorted(set(logins)), f, indent=2)
 
+def perform_refresh():
+    global cached_data, last_update
+    api = IntraAPI()
+    logins = load_candidates()
+    if not logins: return
+
+    print(f"[{datetime.now().strftime('%H:%M:%S')}] Auto-refreshing Piscine levels...")
+    full_data = []
+    for login in logins:
+        details = api.get_user_details(login)
+        if details:
+            full_data.append(details)
+        time.sleep(0.5)
+
+    cached_data = sorted(full_data, key=lambda x: x["level"], reverse=True)
+    last_update = datetime.now().strftime("%H:%M:%S")
+
+    with open(CACHE_FILE, "w") as f:
+        json.dump(cached_data, f, indent=2)
+
 # ================= CACHE =================
 
 cached_data = []
+
+# ================= SCHEDULER TASK =================
+
+@scheduler.task('interval', id='refresh_task', seconds=600)
+def scheduled_refresh():
+    perform_refresh()
 
 # ================= ROUTES =================
 
 @app.route("/")
 def index():
-    global cached_data
+    global cached_data, last_update
 
     if not cached_data and os.path.exists(CACHE_FILE):
         try:
             with open(CACHE_FILE) as f:
                 cached_data = json.load(f)
+            mtime = os.path.getmtime(CACHE_FILE)
+            last_update = datetime.fromtimestamp(mtime).strftime("%H:%M:%S")
         except json.JSONDecodeError:
             cached_data = []
 
-    return render_template("index.html", students=cached_data)
+    return render_template("index.html", students=cached_data, last_update=last_update)
 
 # ---------- RESCAN ----------
 
@@ -152,7 +190,7 @@ def rescan_students():
     api = IntraAPI()
 
     print("Rescanning recent students...")
-    recent = api.get_recent_students(pages=10, per_page=100)
+    recent = api.get_recent_students(pages=5, per_page=100)
 
     logins = api.filter_heilbronn_candidates(recent)
     save_candidates(logins)
@@ -163,29 +201,12 @@ def rescan_students():
 
 @app.route("/refresh")
 def refresh_data():
-    global cached_data
-    api = IntraAPI()
-
-    logins = load_candidates()
-    print(f"Refreshing {len(logins)} students")
-
-    full_data = []
-
-    for login in logins:
-        print(f"Updating: {login}")
-        details = api.get_user_details(login)
-        if details:
-            full_data.append(details)
-        time.sleep(0.3)
-
-    cached_data = sorted(full_data, key=lambda x: x["level"], reverse=True)
-
-    with open(CACHE_FILE, "w") as f:
-        json.dump(cached_data, f, indent=2)
-
+    perform_refresh()
     return redirect("/")
 
 # ================= RUN =================
 
 if __name__ == "__main__":
-    app.run(debug=True, port=5000)
+    scheduler.init_app(app)
+    scheduler.start()
+    app.run(debug=True, port=5000, use_reloader=False)

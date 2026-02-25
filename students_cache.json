@@ -28,9 +28,37 @@
     "exams": []
   },
   {
+    "login": "jbhinsar",
+    "email": "jbhinsar@student.42heilbronn.de",
+    "image": "https://cdn.intra.42.fr/users/49e482a04b0d0d42bf3db5d805b814f6/jbhinsar.jpg",
+    "level": 0.61,
+    "exams": []
+  },
+  {
     "login": "asylai",
     "email": "asylai@student.42heilbronn.de",
     "image": "https://cdn.intra.42.fr/users/8f4d8976c26e9bd6841abfcd135bbdf4/asylai.jpg",
+    "level": 0.44,
+    "exams": []
+  },
+  {
+    "login": "dvasilev",
+    "email": "dvasilev@student.42heilbronn.de",
+    "image": "https://cdn.intra.42.fr/users/0df956328300f96068d18b5d071dcff0/dvasilev.jpg",
+    "level": 0.44,
+    "exams": []
+  },
+  {
+    "login": "jjager",
+    "email": "jjager@student.42heilbronn.de",
+    "image": "https://cdn.intra.42.fr/users/4148fecbf393f2459148c809097ee390/jjager.jpg",
+    "level": 0.44,
+    "exams": []
+  },
+  {
+    "login": "jrookyar",
+    "email": "jrookyar@student.42heilbronn.de",
+    "image": "https://cdn.intra.42.fr/users/2a1aeebd174ba7a83b596a085ae5f1dc/jrookyar.jpg",
     "level": 0.44,
     "exams": []
   },
@@ -231,13 +259,6 @@
     "exams": []
   },
   {
-    "login": "dvasilev",
-    "email": "dvasilev@student.42heilbronn.de",
-    "image": "https://cdn.intra.42.fr/users/0df956328300f96068d18b5d071dcff0/dvasilev.jpg",
-    "level": 0.0,
-    "exams": []
-  },
-  {
     "login": "ecakiray",
     "email": "ecakiray@student.42heilbronn.de",
     "image": "https://cdn.intra.42.fr/users/6e00e74f3d68d2cc0352879ce6717eca/ecakiray.jpg",
@@ -336,13 +357,6 @@
     "exams": []
   },
   {
-    "login": "jbhinsar",
-    "email": "jbhinsar@student.42heilbronn.de",
-    "image": "https://cdn.intra.42.fr/users/49e482a04b0d0d42bf3db5d805b814f6/jbhinsar.jpg",
-    "level": 0.0,
-    "exams": []
-  },
-  {
     "login": "jboateng",
     "email": "jboateng@student.42heilbronn.de",
     "image": "https://cdn.intra.42.fr/users/ac7029871270a7fb28ef00e0158dcf25/jboateng.jpg",
@@ -360,13 +374,6 @@
     "login": "jhammel",
     "email": "jhammel@student.42heilbronn.de",
     "image": "https://cdn.intra.42.fr/users/184e0ccd899e203e24f83e06c5665876/jhammel.jpg",
-    "level": 0.0,
-    "exams": []
-  },
-  {
-    "login": "jjager",
-    "email": "jjager@student.42heilbronn.de",
-    "image": "https://cdn.intra.42.fr/users/4148fecbf393f2459148c809097ee390/jjager.jpg",
     "level": 0.0,
     "exams": []
   },
@@ -402,13 +409,6 @@
     "login": "jmooroli",
     "email": "jmooroli@student.42heilbronn.de",
     "image": "https://cdn.intra.42.fr/users/9890019b06f8d3f6f7e8d80408b00ee0/jmooroli.jpg",
-    "level": 0.0,
-    "exams": []
-  },
-  {
-    "login": "jrookyar",
-    "email": "jrookyar@student.42heilbronn.de",
-    "image": "https://cdn.intra.42.fr/users/2a1aeebd174ba7a83b596a085ae5f1dc/jrookyar.jpg",
     "level": 0.0,
     "exams": []
   },

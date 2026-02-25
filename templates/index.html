@@ -10,6 +10,38 @@
             color: white;
             padding: 20px;
         }
+        .status-bar {
+            text-align: center;
+            margin-bottom: 30px;
+            background: #2a2a40;
+            display: inline-block;
+            padding: 10px 20px;
+            border-radius: 30px;
+            left: 50%;
+            position: relative;
+            transform: translateX(-50%);
+            border: 1px solid #3f3f5a;
+        }
+        .status-time {
+            color: #00babc;
+            font-weight: bold;
+        }
+        .refresh-btn {
+            margin-left: 15px;
+            color: #888;
+            text-decoration: none;
+            font-size: 0.8em;
+            border: 1px solid #888;
+            padding: 2px 8px;
+            border-radius: 5px;
+            transition: all 0.2s;
+        }
+        .refresh-btn:hover {
+            color: white;
+            border-color: white;
+            background: rgba(255,255,255,0.1);
+        }
+
         .grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
@@ -56,6 +88,7 @@
         h1 {
             text-align: center;
             color: #00babc;
+            margin-bottom: 10px;
         }
         a.intra-link {
             color: white;
@@ -69,28 +102,29 @@
 </head>
 <body>
 
-<h1>42 Students (Feb-Mar 2026)</h1>
+<h1>42 Heilbronn Piscine Tracker</h1>
+
+<div class="status-bar">
+    Last Update: <span class="status-time">{{ last_update }}</span>
+    <span style="color: #666; margin: 0 10px;">|</span>
+    Auto-refresh: <span style="color: #4caf50;">Active (10m)</span>
+    <a href="/refresh" class="refresh-btn">Refresh Now</a>
+</div>
 
 <div class="grid">
     {% for student in students %}
     <div class="card">
-
-        <!-- Аватар → Intra -->
-        <a href="https://intra.42.fr/users/{{ student.login }}"
-           target="_blank">
+        <a href="https://intra.42.fr/users/{{ student.login }}" target="_blank">
             <img src="{{ student.image }}" class="avatar" alt="photo">
         </a>
 
-        <!-- Логин → Intra -->
         <h3>
-            <a href="https://intra.42.fr/users/{{ student.login }}"
-               target="_blank"
-               class="intra-link">
+            <a href="https://intra.42.fr/users/{{ student.login }}" target="_blank" class="intra-link">
                 {{ student.login }}
             </a>
         </h3>
 
-        <div class="level">Level: {{ student.level }}</div>
+        <div class="level">Level: {{ "%.2f"|format(student.level) }}</div>
 
         <div class="exams">
             <strong>Exams:</strong>
@@ -100,10 +134,9 @@
                 <span>{{ exam.mark }}</span>
             </div>
             {% else %}
-            <div>No exams yet</div>
+            <div style="color: #666; font-style: italic;">No exams finished yet</div>
             {% endfor %}
         </div>
-
     </div>
     {% endfor %}
 </div>
