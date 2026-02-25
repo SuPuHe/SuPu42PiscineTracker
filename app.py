@@ -38,7 +38,7 @@ class IntraAPI:
 
     # ---------- DISCOVERY ----------
 
-    def get_recent_students(self, pages=5, per_page=100):
+    def get_recent_students(self, pages=6, per_page=100):
         headers = {"Authorization": f"Bearer {self.token}"}
         students = []
 
@@ -145,7 +145,7 @@ def index():
 
     return render_template("index.html", students=cached_data)
 
-# ---------- RESCAN (редко) ----------
+# ---------- RESCAN ----------
 
 @app.route("/rescan")
 def rescan_students():
@@ -159,7 +159,7 @@ def rescan_students():
 
     return f"Found {len(logins)} Heilbronn candidates. Saved."
 
-# ---------- REFRESH (часто) ----------
+# ---------- REFRESH ----------
 
 @app.route("/refresh")
 def refresh_data():
