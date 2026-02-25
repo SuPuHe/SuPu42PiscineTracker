@@ -10,9 +10,10 @@
             color: white;
             padding: 20px;
         }
+
         .status-bar {
             text-align: center;
-            margin-bottom: 30px;
+            margin-bottom: 20px;
             background: #2a2a40;
             display: inline-block;
             padding: 10px 20px;
@@ -42,6 +43,38 @@
             background: rgba(255,255,255,0.1);
         }
 
+        .sort-panel {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .sort-label {
+            margin-right: 10px;
+            color: #888;
+            font-size: 0.9em;
+        }
+        .sort-btn {
+            background: #2a2a40;
+            color: #888;
+            border: 1px solid #3f3f5a;
+            padding: 8px 15px;
+            margin: 0 5px;
+            border-radius: 5px;
+            text-decoration: none;
+            font-size: 0.9em;
+            transition: all 0.2s;
+            display: inline-block;
+        }
+        .sort-btn:hover {
+            border-color: #00babc;
+            color: white;
+        }
+        .sort-btn.active {
+            background: #00babc;
+            color: #1e1e2f;
+            border-color: #00babc;
+            font-weight: bold;
+        }
+
         .grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
@@ -53,6 +86,10 @@
             border-radius: 10px;
             text-align: center;
             border: 1px solid #3f3f5a;
+            transition: border-color 0.3s;
+        }
+        .card:hover {
+            border-color: #00babc;
         }
         .avatar {
             width: 100px;
@@ -71,20 +108,32 @@
             color: #00babc;
             font-weight: bold;
         }
+
         .exams {
             font-size: 0.8em;
             text-align: left;
             margin-top: 10px;
             background: #1a1a2e;
-            padding: 5px;
+            padding: 8px;
             border-radius: 5px;
         }
         .exam-item {
             display: flex;
             justify-content: space-between;
             border-bottom: 1px solid #333;
-            padding: 2px 0;
+            padding: 4px 0;
         }
+        .exam-item:last-child {
+            border-bottom: none;
+        }
+        .exam-mark {
+            font-weight: bold;
+            color: #4caf50;
+        }
+        .exam-mark.low {
+            color: #ff5252;
+        }
+
         h1 {
             text-align: center;
             color: #00babc;
@@ -111,6 +160,15 @@
     <a href="/refresh" class="refresh-btn">Refresh Now</a>
 </div>
 
+<div class="sort-panel">
+    <span class="sort-label">Sort by:</span>
+    <a href="/?sort=level" class="sort-btn {{ 'active' if current_sort == 'level' or not current_sort }}">Level</a>
+    <a href="/?sort=exam00" class="sort-btn {{ 'active' if current_sort == 'exam00' }}">Exam 00</a>
+    <a href="/?sort=exam01" class="sort-btn {{ 'active' if current_sort == 'exam01' }}">Exam 01</a>
+    <a href="/?sort=exam02" class="sort-btn {{ 'active' if current_sort == 'exam02' }}">Exam 02</a>
+    <a href="/?sort=exam03" class="sort-btn {{ 'active' if current_sort == 'exam03' }}">Final Exam</a>
+</div>
+
 <div class="grid">
     {% for student in students %}
     <div class="card">
@@ -131,15 +189,25 @@
             {% for exam in student.exams %}
             <div class="exam-item">
                 <span>{{ exam.name }}</span>
-                <span>{{ exam.mark }}</span>
+                <span class="exam-mark {{ 'low' if exam.mark < 29 }}">
+                    {{ exam.mark }}
+                </span>
             </div>
             {% else %}
-            <div style="color: #666; font-style: italic;">No exams finished yet</div>
+            <div style="color: #666; font-style: italic; text-align: center; padding-top: 5px;">
+                No exams finished yet
+            </div>
             {% endfor %}
         </div>
     </div>
     {% endfor %}
 </div>
+
+<script>
+    setTimeout(function(){
+       window.location.reload();
+    }, 300000);
+</script>
 
 </body>
 </html>

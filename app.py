@@ -3,7 +3,7 @@ import time
 import json
 import requests
 from datetime import datetime
-from flask import Flask, render_template, redirect
+from flask import Flask, render_template, redirect, request 
 from flask_apscheduler import APScheduler
 from dotenv import load_dotenv
 
@@ -144,7 +144,9 @@ def perform_refresh():
 
     print(f"[{datetime.now().strftime('%H:%M:%S')}] Auto-refreshing Piscine levels...")
     full_data = []
-    for login in logins:
+
+    for i, login in enumerate(logins, 1):
+        print(f"[{datetime.now().strftime('%H:%M:%S')}] Update pisciner: {i}/{len(logins)}: {login}")
         details = api.get_user_details(login)
         if details:
             full_data.append(details)
@@ -155,6 +157,7 @@ def perform_refresh():
 
     with open(CACHE_FILE, "w") as f:
         json.dump(cached_data, f, indent=2)
+    print(f"[{datetime.now().strftime('%H:%M:%S')}] Auto-refreshing Piscine levels complete")
 
 # ================= CACHE =================
 
@@ -172,6 +175,8 @@ def scheduled_refresh():
 def index():
     global cached_data, last_update
 
+    sort_by = request.args.get('sort', 'level')
+
     if not cached_data and os.path.exists(CACHE_FILE):
         try:
             with open(CACHE_FILE) as f:
@@ -181,7 +186,22 @@ def index():
         except json.JSONDecodeError:
             cached_data = []
 
-    return render_template("index.html", students=cached_data, last_update=last_update)
+    def get_exam_mark(student, exam_name):
+        for e in student.get('exams', []):
+            if exam_name.lower() in e['name'].lower():
+                return e['mark']
+        return -1
+
+    if sort_by == 'level':
+        display_data = sorted(cached_data, key=lambda x: x['level'], reverse=True)
+    elif sort_by.startswith('exam'):
+        exam_num = sort_by.replace('exam', '')
+        search_name = "Final Exam" if exam_num == "03" else f"Exam {exam_num}"
+        display_data = sorted(cached_data, key=lambda x: get_exam_mark(x, search_name), reverse=True)
+    else:
+        display_data = sorted(cached_data, key=lambda x: x['level'], reverse=True)
+
+    return render_template("index.html", students=display_data, last_update=last_update, current_sort=sort_by)
 
 # ---------- RESCAN ----------
 
