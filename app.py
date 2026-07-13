@@ -3,7 +3,7 @@ import time
 import json
 import requests
 from datetime import datetime
-from flask import Flask, render_template, redirect, request 
+from flask import Flask, render_template, redirect, request
 from flask_apscheduler import APScheduler
 from dotenv import load_dotenv
 
@@ -17,8 +17,9 @@ UID = os.getenv("UID")
 SECRET = os.getenv("SECRET")
 
 API_URL = "https://api.intra.42.fr/v2"
+CAMPUS_ID = 39 
 
-HEILBRONN_EMAIL_DOMAIN = "@student.42heilbronn.de"
+TARGET_DATE = "2026-07-06"
 
 CANDIDATES_FILE = "heilbronn_candidates.json"
 CACHE_FILE = "students_cache.json"
@@ -45,39 +46,42 @@ class IntraAPI:
         return res.json().get("access_token")
 
     # ---------- DISCOVERY ----------
-
-    def get_recent_students(self, pages=6, per_page=100):
+    def get_recent_heilbronn_users_raw(self, count=100):
         headers = {"Authorization": f"Bearer {self.token}"}
-        students = []
 
-        for page in range(1, pages + 1):
-            params = {
-                "filter[kind]": "student",
-                "sort": "-created_at",
-                "page[size]": per_page,
-                "page[number]": page
-            }
+        params = {
+            "sort": "-created_at",
+            "page[size]": count,
+            "page[number]": 1
+        }
 
-            res = requests.get(f"{API_URL}/users", headers=headers, params=params)
-            if res.status_code != 200:
-                print("API error:", res.text)
-                break
+        url = f"{API_URL}/campus/{CAMPUS_ID}/users"
+        print(f"[{datetime.now().strftime('%H:%M:%S')}] API Request: {url}")
 
-            users = res.json()
-            if not users:
-                break
+        res = requests.get(url, headers=headers, params=params)
+        if res.status_code != 200:
+            print("API error:", res.text)
+            return []
 
-            students.extend(users)
-            time.sleep(0.2)
+        campus_users = res.json()
+        parsed_users = []
 
-        return students
+        for cu in campus_users:
+            if "user" in cu and isinstance(cu["user"], dict):
+                user_data = cu["user"]
+            else:
+                user_data = cu
 
-    def filter_heilbronn_candidates(self, users):
-        return [
-            u["login"]
-            for u in users
-            if u.get("email", "").endswith(HEILBRONN_EMAIL_DOMAIN)
-        ]
+            login = user_data.get("login")
+            created_at = user_data.get("created_at") or cu.get("created_at", "")
+
+            if login:
+                parsed_users.append({
+                    "login": login,
+                    "created_at": created_at
+                })
+
+        return parsed_users
 
     # ---------- TRACKING ----------
 
@@ -129,8 +133,15 @@ last_update = "Never"
 def load_candidates():
     if not os.path.exists(CANDIDATES_FILE):
         return []
-    with open(CANDIDATES_FILE) as f:
-        return json.load(f)
+    try:
+        with open(CANDIDATES_FILE) as f:
+            content = f.read().strip()
+            if not content:
+                return []
+            return json.loads(content)
+    except json.JSONDecodeError:
+        print(f"Warning: file {CANDIDATES_FILE} was corrupted or empty.")
+        return []
 
 def save_candidates(logins):
     with open(CANDIDATES_FILE, "w") as f:
@@ -140,7 +151,9 @@ def perform_refresh():
     global cached_data, last_update
     api = IntraAPI()
     logins = load_candidates()
-    if not logins: return
+    if not logins:
+        print("Candidates empty")
+        return
 
     print(f"[{datetime.now().strftime('%H:%M:%S')}] Auto-refreshing Piscine levels...")
     full_data = []
@@ -203,19 +216,32 @@ def index():
 
     return render_template("index.html", students=display_data, last_update=last_update, current_sort=sort_by)
 
-# ---------- RESCAN ----------
-
 @app.route("/rescan")
 def rescan_students():
     api = IntraAPI()
 
-    print("Rescanning recent students...")
-    recent = api.get_recent_students(pages=5, per_page=100)
+    print(f"Rescanning recent Heilbronn students and filtering by date {TARGET_DATE}...")
 
-    logins = api.filter_heilbronn_candidates(recent)
-    save_candidates(logins)
+    raw_users = api.get_recent_heilbronn_users_raw(count=100)
 
-    return f"Found {len(logins)} Heilbronn candidates. Saved."
+    if not raw_users:
+        return f"No students found in campus {CAMPUS_ID} or API error."
+
+    filtered_logins = [
+        u["login"]
+        for u in raw_users
+        if u["created_at"].startswith(TARGET_DATE)
+    ]
+
+    if not filtered_logins:
+        return f"Processed 100 users, but found 0 users registered on {TARGET_DATE}."
+
+    existing_logins = load_candidates()
+    combined_logins = list(set(existing_logins + filtered_logins))
+
+    save_candidates(combined_logins)
+
+    return f"Successfully filtered! Found {len(filtered_logins)} users from {TARGET_DATE}. Total unique monitored users: {len(combined_logins)}."
 
 # ---------- REFRESH ----------
 
@@ -229,4 +255,4 @@ def refresh_data():
 if __name__ == "__main__":
     scheduler.init_app(app)
     scheduler.start()
-    app.run(host='0.0.0.0', debug=True, port=5000, use_reloader=False)
+    app.run(host='0.0.0.0', debug=True, port=5173, use_reloader=False)
